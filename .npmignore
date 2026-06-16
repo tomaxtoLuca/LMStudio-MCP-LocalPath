@@ -1,0 +1,13 @@
+# Source & dev (publish dist/ only)
+src/
+*.ts
+!dist/**
+tsconfig.json
+
+# Chinese docs — not included in npm tarball
+docs/
+
+# Dev / local
+.env
+.gitignore
+node_modules/
