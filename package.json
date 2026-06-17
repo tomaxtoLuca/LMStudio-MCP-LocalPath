@@ -14,24 +14,26 @@
     ".env.example"
   ],
   "scripts": {
-    "start": "node --experimental-strip-types src/index.ts",
-    "dev": "node --watch --experimental-strip-types src/index.ts",
+    "start": "node dist/index.js",
+    "prestart": "npm run build",
+    "dev": "npm run build && node --watch dist/index.js",
     "build": "tsc",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
-    "pdf-parse": "^1.1.1",
-    "mammoth": "^1.8.0",
-    "glob": "^11.0.0",
     "chokidar": "^3.6.0",
+    "dotenv": "^16.4.5",
+    "glob": "^11.0.0",
+    "mammoth": "^1.8.0",
     "mime-types": "^2.1.35",
-    "dotenv": "^16.4.5"
+    "pdf-parse": "^1.1.1",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/mime-types": "^2.1.4",
     "@types/node": "^20.14.0",
     "@types/pdf-parse": "^1.1.4",
-    "@types/mime-types": "^2.1.4",
     "typescript": "^5.5.0"
   },
   "engines": {

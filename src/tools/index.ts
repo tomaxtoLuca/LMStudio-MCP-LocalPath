@@ -4,6 +4,7 @@
 
 import { readdirSync, statSync, existsSync } from 'fs'
 import { resolve, join, basename, extname } from 'path'
+import { z } from 'zod'
 import { readFile, extractSnippet, FileReadError } from '../utils/reader.js'
 import { isPathAllowed, config } from '../config/index.js'
 import { glob } from 'glob'
@@ -55,6 +56,11 @@ export const READ_FILE_TOOL = {
       },
     },
     required: ['path'],
+  },
+  zodShape: {
+    path: z.string().describe('Absolute or relative path to the file. Example: /Users/me/Documents/report.pdf'),
+    start_line: z.number().optional().describe('Optional: start reading from this line number (1-indexed)'),
+    end_line: z.number().optional().describe('Optional: stop reading at this line number (inclusive)'),
   },
 }
 
@@ -121,6 +127,12 @@ export const LIST_DIRECTORY_TOOL = {
       },
     },
     required: ['path'],
+  },
+  zodShape: {
+    path: z.string().describe('Directory path to list. Example: /Users/me/Documents'),
+    recursive: z.boolean().optional().describe('Recurse into subdirectories (default: false)'),
+    filter: z.string().optional().describe('Filter by extension. Example: "pdf" or "md,txt"'),
+    show_hidden: z.boolean().optional().describe('Include hidden files starting with "." (default: false)'),
   },
 }
 
@@ -254,6 +266,12 @@ export const SEARCH_IN_FILE_TOOL = {
     },
     required: ['path', 'query'],
   },
+  zodShape: {
+    path: z.string().describe('File path to search in'),
+    query: z.string().describe('Search term or phrase (case-insensitive)'),
+    context_lines: z.number().optional().describe('Number of lines to show before and after each match (default: 5)'),
+    max_matches: z.number().optional().describe('Maximum number of matches to return (default: 10)'),
+  },
 }
 
 export async function handleSearchInFile(args: {
@@ -314,6 +332,10 @@ export const READ_MULTIPLE_TOOL = {
     },
     required: ['paths'],
   },
+  zodShape: {
+    paths: z.array(z.string()).max(10).describe('Array of file paths to read'),
+    summary_only: z.boolean().optional().describe('Return only the first 500 chars per file for a quick overview (default: false)'),
+  },
 }
 
 export async function handleReadMultiple(args: { paths: string[]; summary_only?: boolean }) {
@@ -371,6 +393,11 @@ export const FIND_FILES_TOOL = {
       },
     },
     required: ['pattern'],
+  },
+  zodShape: {
+    pattern: z.string().describe('File name or glob pattern. Examples: "*.pdf", "report*", "**/*.md"'),
+    search_path: z.string().optional().describe('Directory to search in (defaults to all allowed paths)'),
+    max_results: z.number().optional().describe('Maximum results to return (default: 50)'),
   },
 }
 
@@ -460,6 +487,20 @@ export const REASON_OVER_FILE_TOOL = {
       },
     },
     required: ['paths', 'instruction'],
+  },
+  zodShape: {
+    paths: z.array(z.string()).max(5).describe('File path(s) to read and reason over'),
+    instruction: z.string().describe(
+      'What to do with the file content. Examples: ' +
+      '"Summarise the key points", ' +
+      '"Extract all action items", ' +
+      '"Compare these two documents", ' +
+      '"Review this code for bugs", ' +
+      '"Translate to English"'
+    ),
+    output_format: z.enum(['prose', 'bullet_points', 'json', 'markdown', 'table']).optional()
+      .describe('Desired output format (default: prose)'),
+    max_tokens: z.number().optional().describe('Maximum tokens for the reasoning response (default: 2048)'),
   },
 }
 
@@ -575,6 +616,9 @@ export const GET_FILE_INFO_TOOL = {
       path: { type: 'string', description: 'File path' },
     },
     required: ['path'],
+  },
+  zodShape: {
+    path: z.string().describe('File path'),
   },
 }
 

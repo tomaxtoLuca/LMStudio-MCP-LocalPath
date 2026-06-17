@@ -19,7 +19,7 @@ GitHub: [tomaxtoLuca/lmstudio-mcp-local](https://github.com/tomaxtoLuca/lmstudio
 
 **What makes it different**
 
-- **LM Studio–oriented HTTP endpoint** — add via Settings → Plugins → MCP URL (not only stdio/`mcp.json` CLI).
+- **LM Studio HTTP via `mcp.json`** — register a `url` entry in `~/.lmstudio/mcp.json` (works alongside stdio servers such as `browser`).
 - **Path allowlist** — only directories you configure are readable; extension and size limits apply.
 - **`reason_over_file`** — reads local files then calls your **local** LM Studio API; content stays on your machine.
 - **Document formats** — PDF, DOCX, and plain text / code via `pdf-parse` and `mammoth`.
@@ -81,15 +81,16 @@ LM Studio Chat model
 
 ## Required components
 
-| Type          | Component                         | Requirement                                     |
-| ------------- | --------------------------------- | ----------------------------------------------- |
-| **Install**   | [Node.js](https://nodejs.org/)    | **≥ 22.0.0**                                    |
-| **Install**   | npm                               | Bundled with Node                               |
-| **Install**   | [LM Studio](https://lmstudio.ai/) | Desktop app                                     |
-| **Enable**    | LM Studio local API               | Default `http://127.0.0.1:1234`                 |
-| **Enable**    | Loaded model                      | Load a model in LM Studio                       |
-| **Enable**    | This MCP server                   | `npm start` → `/mcp` endpoint                   |
-| **Configure** | Path allowlist                    | `allowedPaths` in `.env` or `lmstudio-mcp.json` |
+| Type          | Component                         | Requirement                                             |
+| ------------- | --------------------------------- | ------------------------------------------------------- |
+| **Install**   | [Node.js](https://nodejs.org/)    | **≥ 22.0.0**                                            |
+| **Install**   | npm                               | Bundled with Node                                       |
+| **Install**   | [LM Studio](https://lmstudio.ai/) | Desktop app                                             |
+| **Enable**    | LM Studio local API               | Default `http://127.0.0.1:1234`                         |
+| **Enable**    | Loaded model                      | Load a model in LM Studio                               |
+| **Enable**    | This MCP server                   | `npm start` → `/mcp` endpoint                           |
+| **Configure** | Path allowlist                    | `allowedPaths` in project `.env` or `lmstudio-mcp.json` |
+| **Configure** | LM Studio MCP list                | `url` in `~/.lmstudio/mcp.json` (see step 4 below)      |
 
 **Not required:** Python, Docker, vector DB, external database.
 
@@ -142,6 +143,13 @@ npm install
 
 ### 1. Configure allowed local paths
 
+> **Two different files named `mcp.json` / `lmstudio-mcp.json`**
+>
+> | File                                                                  | Purpose                                                                 |
+> | --------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+> | **`~/.lmstudio/mcp.json`** (e.g. `C:\Users\<you>\.lmstudio\mcp.json`) | LM Studio’s MCP server list — add the HTTP `url` here in step 4         |
+> | **Project `lmstudio-mcp.json`** (repo root)                           | This server’s path allowlist and settings — **not** edited in LM Studio |
+
 ```bash
 cp .env.example .env   # Windows: copy .env.example .env
 ```
@@ -156,7 +164,7 @@ MCP_ALLOWED_PATHS=F:/Documents:F:/Projects
 # MCP_ALLOWED_PATHS=/Users/me/Documents:/Users/me/Projects
 ```
 
-Or use `lmstudio-mcp.json`:
+Or use the **project** `lmstudio-mcp.json` (path allowlist only — do **not** put this in `~/.lmstudio/mcp.json`):
 
 ```json
 {
@@ -188,12 +196,33 @@ Expected output:
 
 ### 4. Add MCP Server in LM Studio
 
-1. **Settings → Plugins** (or **Tools → MCP Servers**)
-2. **Add MCP Server**
-3. URL (default): `http://127.0.0.1:8080/mcp`  
-   If you changed the port: `http://127.0.0.1:<your-port>/mcp`
-4. **Save** and **Enable**
-5. Seven tools should appear in Chat
+This server uses **HTTP** — start it first (`npm start` in step 3), then register the URL in LM Studio’s config file.
+
+1. LM Studio → **Program** → **Install** → **Edit mcp.json**
+2. Config file: `~/.lmstudio/mcp.json` (Windows: `C:\Users\<you>\.lmstudio\mcp.json`)
+3. Add a `url` entry under `mcpServers`. **Keep** any existing servers (e.g. `browser`):
+
+```json
+{
+  "mcpServers": {
+    "browser": {
+      "command": "node",
+      "args": ["G:/Lmstudio/LM Studio/.lmstudio/plugins/mcp/browser/index.js"]
+    },
+    "lmstudio-mcp-local": {
+      "url": "http://127.0.0.1:8080/mcp"
+    }
+  }
+}
+```
+
+- **`browser`** — stdio MCP; LM Studio launches it via `command` + `args`
+- **`lmstudio-mcp-local`** — HTTP MCP; you must run `npm start` separately before LM Studio can connect
+
+4. Save valid JSON (no comments, no trailing commas), then restart or reload LM Studio
+5. In Chat, you should see **7 local file tools** alongside any other MCP tools
+
+If you changed `MCP_PORT`, use `http://127.0.0.1:<your-port>/mcp` in the `url` field.
 
 ### 5. Verify local path access
 
@@ -241,9 +270,11 @@ MCP_PORT=9090
 }
 ```
 
-Restart the server and update the MCP URL in LM Studio (e.g. `http://127.0.0.1:9090/mcp`).
+Restart the server and update the `url` in `~/.lmstudio/mcp.json` (e.g. `http://127.0.0.1:9090/mcp`).
 
-### Full config example
+### Full config example (project `lmstudio-mcp.json`)
+
+This file configures **this MCP server** (allowlist, port, etc.) — not LM Studio’s `~/.lmstudio/mcp.json`.
 
 ```json
 {
@@ -285,7 +316,20 @@ Restart the server and update the MCP URL in LM Studio (e.g. `http://127.0.0.1:9
 
 ## Troubleshooting
 
-**Port in use** — change `MCP_PORT` or free the port.
+**Port in use** — another MCP server instance may still be running. Free the port or change `MCP_PORT`:
+
+```powershell
+# Windows
+netstat -ano | findstr :8080
+taskkill /PID <pid> /F
+```
+
+```bash
+# macOS / Linux
+lsof -ti:8080 | xargs kill
+```
+
+**Tools not appearing in Chat** — confirm `npm start` is running and LM Studio reloaded `~/.lmstudio/mcp.json`.
 
 **LM Studio not reachable** — ensure app is open, model loaded, API enabled.
 

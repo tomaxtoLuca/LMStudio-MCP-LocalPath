@@ -19,7 +19,7 @@ GitHub：[tomaxtoLuca/lmstudio-mcp-local](https://github.com/tomaxtoLuca/lmstudi
 
 **特点**
 
-- **面向 LM Studio 的 HTTP 端点** — 可在 Settings → Plugins 中填写 MCP URL（不限于 stdio / `mcp.json` 命令行）。
+- **面向 LM Studio 的 HTTP 端点** — 在 `~/.lmstudio/mcp.json` 中添加 `url` 项（可与 `browser` 等 stdio 服务器并存）。
 - **路径白名单** — 仅可读取你配置的目录；含扩展名与大小限制。
 - **`reason_over_file`** — 读取本地文件后调用**本机** LM Studio API，数据不出本机。
 - **文档格式** — 支持 PDF、DOCX 及纯文本/代码（`pdf-parse`、`mammoth`）。
@@ -82,15 +82,16 @@ LM Studio Chat 模型
 
 ## 必装 / 必开组件
 
-| 类型     | 组件                              | 要求                                              |
-| -------- | --------------------------------- | ------------------------------------------------- |
-| **必装** | [Node.js](https://nodejs.org/)    | **≥ 22.0.0**                                      |
-| **必装** | npm                               | 随 Node 自带                                      |
-| **必装** | [LM Studio](https://lmstudio.ai/) | 桌面客户端                                        |
-| **必开** | LM Studio 本地 API                | 默认 `http://127.0.0.1:1234`                      |
-| **必开** | 已加载模型                        | 在 LM Studio 中 Load 一个模型                     |
-| **必开** | 本 MCP Server                     | `npm start` 后监听 `/mcp` 端点                    |
-| **必配** | 本地路径白名单                    | `.env` 或 `lmstudio-mcp.json` 中的 `allowedPaths` |
+| 类型     | 组件                              | 要求                                                   |
+| -------- | --------------------------------- | ------------------------------------------------------ |
+| **必装** | [Node.js](https://nodejs.org/)    | **≥ 22.0.0**                                           |
+| **必装** | npm                               | 随 Node 自带                                           |
+| **必装** | [LM Studio](https://lmstudio.ai/) | 桌面客户端                                             |
+| **必开** | LM Studio 本地 API                | 默认 `http://127.0.0.1:1234`                           |
+| **必开** | 已加载模型                        | 在 LM Studio 中 Load 一个模型                          |
+| **必开** | 本 MCP Server                     | `npm start` 后监听 `/mcp` 端点                         |
+| **必配** | 本地路径白名单                    | 项目 `.env` 或 `lmstudio-mcp.json` 中的 `allowedPaths` |
+| **必配** | LM Studio MCP 列表                | `~/.lmstudio/mcp.json` 中的 `url`（见下方第 4 步）     |
 
 **不需要：** Python、Docker、向量数据库、额外数据库。
 
@@ -141,6 +142,13 @@ npm install
 
 ### 1. 配置本地路径白名单
 
+> **两个容易混淆的配置文件**
+>
+> | 文件                                                                      | 用途                                                            |
+> | ------------------------------------------------------------------------- | --------------------------------------------------------------- |
+> | **`~/.lmstudio/mcp.json`**（Windows：`C:\Users\<你>\.lmstudio\mcp.json`） | LM Studio 的 MCP 服务器列表 — 在第 4 步添加 HTTP `url`          |
+> | **项目根目录 `lmstudio-mcp.json`**                                        | 本 MCP 服务器的路径白名单与设置 — **不要**写进 LM Studio 的配置 |
+
 ```bash
 # Linux / macOS
 cp .env.example .env
@@ -159,7 +167,7 @@ MCP_ALLOWED_PATHS=F:/Documents:F:/Projects
 # MCP_ALLOWED_PATHS=/Users/me/Documents:/Users/me/Projects
 ```
 
-或使用 `lmstudio-mcp.json`：
+或使用**项目内** `lmstudio-mcp.json`（仅路径白名单 — **不要**放入 `~/.lmstudio/mcp.json`）：
 
 ```json
 {
@@ -195,15 +203,33 @@ npm start
 
 ### 4. 在 LM Studio 添加 MCP Server
 
-1. 打开 **Settings → Plugins**（或 **Tools → MCP Servers**）
-2. 点击 **Add MCP Server**
-3. 填写 MCP URL（默认）：
-   ```
-   http://127.0.0.1:8080/mcp
-   ```
-   若修改了端口，改为：`http://127.0.0.1:<你的端口>/mcp`
-4. **Save** 并 **Enable**
-5. 回到 Chat，应看到 7 个 tools
+本服务使用 **HTTP** 传输 — 须先完成第 3 步 `npm start`，再在 LM Studio 配置文件中注册 URL。
+
+1. LM Studio → **Program** → **Install** → **Edit mcp.json**
+2. 配置文件路径：`~/.lmstudio/mcp.json`（Windows：`C:\Users\<你>\.lmstudio\mcp.json`）
+3. 在 `mcpServers` 下添加 `url` 项。**保留**已有服务器（例如 `browser`）：
+
+```json
+{
+  "mcpServers": {
+    "browser": {
+      "command": "node",
+      "args": ["G:/Lmstudio/LM Studio/.lmstudio/plugins/mcp/browser/index.js"]
+    },
+    "lmstudio-mcp-local": {
+      "url": "http://127.0.0.1:8080/mcp"
+    }
+  }
+}
+```
+
+- **`browser`** — stdio MCP，由 LM Studio 通过 `command` + `args` 启动
+- **`lmstudio-mcp-local`** — HTTP MCP，须**单独**运行 `npm start` 后 LM Studio 才能连接
+
+4. 保存合法 JSON（无注释、无尾逗号），重启或重载 LM Studio
+5. 在 Chat 中应看到 **7 个本地文件工具**，与其他 MCP 工具并存
+
+若修改了 `MCP_PORT`，将 `url` 改为 `http://127.0.0.1:<你的端口>/mcp`。
 
 ### 5. 验证本地路径可读
 
@@ -251,9 +277,11 @@ MCP_PORT=9090
 }
 ```
 
-修改后重启 MCP Server，并在 LM Studio 中更新 MCP URL，例如：`http://127.0.0.1:9090/mcp`
+修改后重启 MCP Server，并更新 `~/.lmstudio/mcp.json` 中的 `url`，例如：`http://127.0.0.1:9090/mcp`
 
-### 完整配置示例
+### 完整配置示例（项目 `lmstudio-mcp.json`）
+
+此文件配置**本 MCP 服务器**（白名单、端口等）— 不是 LM Studio 的 `~/.lmstudio/mcp.json`。
 
 ```json
 {
@@ -295,17 +323,20 @@ MCP_PORT=9090
 
 ## 故障排查
 
-**端口被占用**
+**端口被占用** — 可能仍有旧实例在运行。释放端口或修改 `MCP_PORT`：
 
-改端口（见上方配置），或释放占用进程：
+```powershell
+# Windows PowerShell
+netstat -ano | findstr :8080
+taskkill /PID <pid> /F
+```
 
 ```bash
 # Linux / macOS
 lsof -ti:8080 | xargs kill
-
-# Windows PowerShell
-Get-NetTCPConnection -LocalPort 8080 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
 ```
+
+**Chat 中看不到工具** — 确认 `npm start` 正在运行，且 LM Studio 已重载 `~/.lmstudio/mcp.json`。
 
 **LM Studio 不可达**  
 确认 LM Studio 已打开、模型已加载、本地 API 已开启。
