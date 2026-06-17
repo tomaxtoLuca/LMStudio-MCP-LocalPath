@@ -3,7 +3,7 @@
 MCP 服务器（npm 包名：`lmstudio-mcp-local`），让 **LM Studio** 通过 MCP 协议 **直接读取你电脑上的本地文件路径**（PDF、DOCX、Markdown、代码、JSON、CSV 等）。  
 全部在本机运行，文件不上传云端。
 
-GitHub：[tomaxtoLuca/lmstudio-mcp-local](https://github.com/tomaxtoLuca/lmstudio-mcp-local) · English: [README.md](../README.md)
+GitHub：[tomaxtoLuca/LMStudio-MCP-LocalPath](https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath) · English: [README.md](../README.md)
 
 ## 项目概览（Overview）
 
@@ -53,7 +53,7 @@ GitHub：[tomaxtoLuca/lmstudio-mcp-local](https://github.com/tomaxtoLuca/lmstudi
 - **未** 包含未经授权的他人代码；
 - **不存在** 雇主或合同条款禁止以 MIT 协议开源本项目。
 
-若你认为本仓库内容侵犯你的权利，请 [提交 Issue](https://github.com/tomaxtoLuca/lmstudio-mcp-local/issues)。
+若你认为本仓库内容侵犯你的权利，请 [提交 Issue](https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath/issues)。
 
 ### 使用者责任
 
@@ -135,7 +135,7 @@ npx lmstudio-mcp-local
 ### 方式 B：从源码运行
 
 ```bash
-git clone https://github.com/tomaxtoLuca/lmstudio-mcp-local.git LMStudio-MCP-Locally
+git clone https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath.git LMStudio-MCP-Locally
 cd LMStudio-MCP-Locally
 npm install
 ```
@@ -167,7 +167,7 @@ MCP_ALLOWED_PATHS=F:/Documents:F:/Projects
 # MCP_ALLOWED_PATHS=/Users/me/Documents:/Users/me/Projects
 ```
 
-或使用**项目内** `lmstudio-mcp.json`（仅路径白名单 — **不要**放入 `~/.lmstudio/mcp.json`）：
+或使用**项目内**配置：复制 `lmstudio-mcp.example.json` 为 `lmstudio-mcp.json` 并编辑 `allowedPaths`（本地文件，不提交 git）：
 
 ```json
 {
@@ -342,10 +342,25 @@ lsof -ti:8080 | xargs kill
 确认 LM Studio 已打开、模型已加载、本地 API 已开启。
 
 **Path not in allowlist**  
-将目标目录加入 `MCP_ALLOWED_PATHS` 或 `allowedPaths`。
+将目录加入 `MCP_ALLOWED_PATHS` 或项目 `lmstudio-mcp.json`。Windows 配置建议用正斜杠（如 `F:/Projects`）；服务端会比较路径时已统一 `\` 与 `/`。
+
+**模型说无法访问本地文件**  
+MCP 服务通常正常，是模型**没有调用工具**。确认 `/health` 为 `ok`，且 LM Studio 连接后 `activeSessions` > 0。开启 Chat 的 **Tool use**。优先选用支持函数调用的模型（社区反馈部分 instruct/coder 类 GGUF 较稳；Gemma 常直接拒绝；Qwen3.5 可能输出 LM Studio 无法解析的 XML 工具格式）。
+
+**`Failed to parse tool call`**（如 `Expected "<parameter=", but got "<path="`）  
+模型工具输出格式与 LM Studio 解析器不匹配。换模型，或明确要求用 JSON 参数调用 `read_file`。
+
+**工具调用无反应**  
+LM Studio 首次需要授权。点击 **Allow** 或 **Always allow any tool from mcp/lmstudio-mcp-local**，否则 `read_file` 不会执行。
+
+**确认工具已执行**  
+在 `.env` 设 `MCP_DEBUG=true`，重启 `npm start` 后再对话。成功时服务端终端应出现 `[tool] read_file → …ms ✓`。
+
+**`Plugin(mcp/browser): server.getTools is not a function`**  
+LM Studio 自带 browser 插件问题，与本项目无关。测本地读文件时可先从 `~/.lmstudio/mcp.json` 去掉 `browser`，或升级 LM Studio。
 
 **模型不调用工具**  
-启用 Chat 中的 Tool use；部分模型需要明确的 system prompt。
+启用 Tool use；测试时可暂时减少其他插件（`browser`、`rag-v1`）干扰。
 
 ---
 
@@ -360,7 +375,7 @@ npm run build  # 编译到 dist/
 
 ## 相关链接
 
-- [GitHub 仓库](https://github.com/tomaxtoLuca/lmstudio-mcp-local)
-- [提交 Issue](https://github.com/tomaxtoLuca/lmstudio-mcp-local/issues)
+- [GitHub 仓库](https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath)
+- [提交 Issue](https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath/issues)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 - [LM Studio](https://lmstudio.ai/)（第三方产品，无隶属关系）

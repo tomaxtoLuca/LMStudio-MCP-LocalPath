@@ -1,6 +1,6 @@
 {
   "name": "lmstudio-mcp-local",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "MCP server for LM Studio — read local file paths on your machine (PDF, DOCX, code, text)",
   "license": "MIT",
   "type": "module",
@@ -47,12 +47,12 @@
     "local-ai"
   ],
   "author": "tomaxtoLuca (https://github.com/tomaxtoLuca)",
-  "homepage": "https://github.com/tomaxtoLuca/lmstudio-mcp-local#readme",
+  "homepage": "https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath#readme",
   "bugs": {
-    "url": "https://github.com/tomaxtoLuca/lmstudio-mcp-local/issues"
+    "url": "https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tomaxtoLuca/lmstudio-mcp-local.git"
+    "url": "git+https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath.git"
   }
 }

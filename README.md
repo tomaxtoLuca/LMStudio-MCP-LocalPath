@@ -3,7 +3,7 @@
 MCP server (`lmstudio-mcp-local` on npm) that lets **LM Studio read local file paths** on your machine (PDF, DOCX, Markdown, code, JSON, CSV, etc.).  
 Everything runs locally — files are never uploaded to the cloud.
 
-GitHub: [tomaxtoLuca/lmstudio-mcp-local](https://github.com/tomaxtoLuca/lmstudio-mcp-local) · 中文文档：[docs/README.zh-CN.md](docs/README.zh-CN.md)
+GitHub: [tomaxtoLuca/LMStudio-MCP-LocalPath](https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath) · 中文文档：[docs/README.zh-CN.md](docs/README.zh-CN.md)
 
 ## Overview
 
@@ -53,7 +53,7 @@ The maintainer ([tomaxtoLuca](https://github.com/tomaxtoLuca)) states that, to t
 - It contains **no third-party code used without authorization**.
 - There are **no employer or contractual restrictions** that prohibit releasing this project under MIT.
 
-If you believe any content infringes your rights, please [open an issue](https://github.com/tomaxtoLuca/lmstudio-mcp-local/issues).
+If you believe any content infringes your rights, please [open an issue](https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath/issues).
 
 ### User responsibility
 
@@ -136,7 +136,7 @@ Copy `.env.example` to `.env` and set `MCP_ALLOWED_PATHS` before starting (see b
 ### Option B: from source
 
 ```bash
-git clone https://github.com/tomaxtoLuca/lmstudio-mcp-local.git LMStudio-MCP-Locally
+git clone https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath.git LMStudio-MCP-Locally
 cd LMStudio-MCP-Locally
 npm install
 ```
@@ -164,7 +164,7 @@ MCP_ALLOWED_PATHS=F:/Documents:F:/Projects
 # MCP_ALLOWED_PATHS=/Users/me/Documents:/Users/me/Projects
 ```
 
-Or use the **project** `lmstudio-mcp.json` (path allowlist only — do **not** put this in `~/.lmstudio/mcp.json`):
+Or copy `lmstudio-mcp.example.json` to `lmstudio-mcp.json` and edit `allowedPaths` (local file; not committed to git):
 
 ```json
 {
@@ -333,9 +333,19 @@ lsof -ti:8080 | xargs kill
 
 **LM Studio not reachable** — ensure app is open, model loaded, API enabled.
 
-**Path not in allowlist** — add directory to `MCP_ALLOWED_PATHS`.
+**Path not in allowlist** — add directory to `MCP_ALLOWED_PATHS` or project `lmstudio-mcp.json`. On Windows, use forward slashes in config (e.g. `F:/Projects`); the server normalizes `\` vs `/` when checking paths.
 
-**Model not using tools** — enable Tool use in Chat settings.
+**Model says it cannot access local files** — the MCP server is fine; the model did not call a tool. Check `/health` returns `ok` and `activeSessions` > 0 after LM Studio connects. Enable **Tool use** in Chat. Prefer models with reliable function calling (community reports success with tool-capable instruct/coder GGUFs; Gemma often refuses; Qwen3.5 may emit XML tool syntax LM Studio cannot parse).
+
+**`Failed to parse tool call`** (e.g. `Expected "<parameter=", but got "<path="`) — model output format does not match LM Studio’s parser. Switch to another model or explicitly ask it to call `read_file` with JSON arguments.
+
+**Tool call pending / nothing happens** — LM Studio requires approval the first time. Click **Allow** or **Always allow any tool from mcp/lmstudio-mcp-local**. Without approval, `read_file` never runs.
+
+**Verify tool execution** — set `MCP_DEBUG=true` in `.env`, restart `npm start`, then chat. You should see `[tool] read_file → …ms ✓` in the server terminal when a call succeeds.
+
+**`Plugin(mcp/browser): server.getTools is not a function`** — LM Studio’s bundled browser MCP plugin issue; unrelated to this server. Remove `browser` from `~/.lmstudio/mcp.json` while testing local files, or update LM Studio.
+
+**Model not using tools** — enable Tool use in Chat settings; reduce competing plugins (`browser`, `rag-v1`) during testing.
 
 ---
 
@@ -350,7 +360,7 @@ npm run build  # compile to dist/
 
 ## Links
 
-- [GitHub Repository](https://github.com/tomaxtoLuca/lmstudio-mcp-local)
-- [Report an issue](https://github.com/tomaxtoLuca/lmstudio-mcp-local/issues)
+- [GitHub Repository](https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath)
+- [Report an issue](https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath/issues)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 - [LM Studio](https://lmstudio.ai/) _(third-party product; not affiliated)_

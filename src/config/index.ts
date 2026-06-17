@@ -134,10 +134,18 @@ export const config: MCPConfig = merge(DEFAULTS, loadFile())
 
 // ── Path guard ────────────────────────────────────────────
 
+/** Normalize for cross-platform prefix checks (Windows `\` vs config `/`). */
+function normalizePathForGuard(p: string): string {
+  return resolve(p).replace(/\\/g, '/').toLowerCase()
+}
+
 export function isPathAllowed(filePath: string): boolean {
   if (!config.security.enforcePathGuard) return true
-  const abs = resolve(filePath)
-  return config.security.allowedPaths.some(allowed => abs.startsWith(allowed))
+  const abs = normalizePathForGuard(filePath)
+  return config.security.allowedPaths.some(allowed => {
+    const root = normalizePathForGuard(allowed)
+    return abs === root || abs.startsWith(`${root}/`)
+  })
 }
 
 export function isExtensionAllowed(filePath: string): boolean {

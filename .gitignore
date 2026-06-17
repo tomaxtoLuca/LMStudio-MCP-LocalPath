@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+lmstudio-mcp.json
 *.log
 .DS_Store
 Thumbs.db

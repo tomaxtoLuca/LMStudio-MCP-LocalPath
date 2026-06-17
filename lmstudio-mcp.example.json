@@ -1,0 +1,8 @@
+{
+  "security": {
+    "allowedPaths": [
+      "F:/Documents",
+      "F:/Projects"
+    ]
+  }
+}
