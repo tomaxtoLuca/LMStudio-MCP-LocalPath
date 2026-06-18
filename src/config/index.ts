@@ -4,15 +4,22 @@
 
 import { readFileSync, existsSync } from 'fs'
 import { resolve, dirname } from 'path'
-import { homedir } from 'os'
+import { homedir, platform } from 'os'
 import { fileURLToPath } from 'url'
 import dotenv from 'dotenv'
 
+const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+
+dotenv.config({ path: resolve(packageRoot, '.env') })
 dotenv.config()
+
+export function getPackageRoot(): string {
+  return packageRoot
+}
 
 function readPackageVersion(): string {
   try {
-    const pkgPath = resolve(dirname(fileURLToPath(import.meta.url)), '../../package.json')
+    const pkgPath = resolve(packageRoot, 'package.json')
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version?: string }
     return pkg.version ?? '0.0.0'
   } catch {
@@ -28,25 +35,17 @@ export interface MCPConfig {
     version: string
   }
   security: {
-    // Explicit allowlist — nothing outside these paths can be read
     allowedPaths: string[]
-    // Max file size in bytes (default 50MB)
     maxFileSize: number
-    // Block these extensions entirely
     blockedExtensions: string[]
-    // Require path to be under allowedPaths (never disable)
     enforcePathGuard: boolean
   }
   reading: {
-    // Max chars returned per read_file call
     maxCharsPerRead: number
-    // Max files returned per list_directory
     maxListEntries: number
-    // Follow symlinks (risky — off by default)
     followSymlinks: boolean
   }
   reasoning: {
-    // LM Studio local API (OpenAI-compatible)
     lmStudioUrl: string
     model: string
     maxContextTokens: number
@@ -54,7 +53,10 @@ export interface MCPConfig {
   }
 }
 
-// ── Defaults ──────────────────────────────────────────────
+function splitEnvPaths(envPaths: string): string[] {
+  const sep = platform() === 'win32' ? ';' : ':'
+  return envPaths.split(sep).map(p => p.trim()).filter(Boolean)
+}
 
 function defaultAllowedPaths(): string[] {
   const home = homedir()
@@ -64,10 +66,9 @@ function defaultAllowedPaths(): string[] {
     resolve(home, 'Downloads'),
     resolve(home, 'Projects'),
   ]
-  // Add any from env
   const envPaths = process.env.MCP_ALLOWED_PATHS
   if (envPaths) {
-    paths.push(...envPaths.split(':').map(p => resolve(p)))
+    paths.push(...splitEnvPaths(envPaths).map(p => resolve(p)))
   }
   return paths.filter(p => existsSync(p))
 }
@@ -102,14 +103,15 @@ const DEFAULTS: MCPConfig = {
   },
 }
 
-// ── Load config file override ─────────────────────────────
-
 function loadFile(): Partial<MCPConfig> {
-  const paths = [
-    resolve('./lmstudio-mcp.json'),
+  const candidates = [
+    process.env.MCP_CONFIG ? resolve(process.env.MCP_CONFIG) : null,
+    resolve(packageRoot, 'lmstudio-mcp.json'),
     resolve(homedir(), '.config/lmstudio-mcp/config.json'),
-  ]
-  for (const p of paths) {
+    resolve('./lmstudio-mcp.json'),
+  ].filter((p): p is string => !!p)
+
+  for (const p of candidates) {
     if (existsSync(p)) {
       try { return JSON.parse(readFileSync(p, 'utf-8')) } catch {}
     }
@@ -132,9 +134,6 @@ function merge<T>(base: T, over: Partial<T>): T {
 
 export const config: MCPConfig = merge(DEFAULTS, loadFile())
 
-// ── Path guard ────────────────────────────────────────────
-
-/** Normalize for cross-platform prefix checks (Windows `\` vs config `/`). */
 function normalizePathForGuard(p: string): string {
   return resolve(p).replace(/\\/g, '/').toLowerCase()
 }

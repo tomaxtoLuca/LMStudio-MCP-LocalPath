@@ -1,4 +1,5 @@
 {
+  "_comment": "Copy to lmstudio-mcp.json next to package.json, or set MCP_CONFIG in ~/.lmstudio/mcp.json env to this file's full path",
   "security": {
     "allowedPaths": [
       "F:/Documents",

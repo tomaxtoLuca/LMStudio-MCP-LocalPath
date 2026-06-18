@@ -1,6 +1,6 @@
 {
   "name": "lmstudio-mcp-local",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "MCP server for LM Studio — read local file paths on your machine (PDF, DOCX, code, text)",
   "license": "MIT",
   "type": "module",
@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "start": "node dist/index.js",
+    "start:http": "node dist/index.js --http",
     "prestart": "npm run build",
     "dev": "npm run build && node --watch dist/index.js",
     "build": "tsc",

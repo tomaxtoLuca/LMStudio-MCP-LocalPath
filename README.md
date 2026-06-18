@@ -14,12 +14,12 @@ GitHub: [tomaxtoLuca/LMStudio-MCP-LocalPath](https://github.com/tomaxtoLuca/LMSt
 | **Maintainer** | [tomaxtoLuca](https://github.com/tomaxtoLuca)                        |
 | **License**    | [MIT](LICENSE)                                                       |
 | **Runtime**    | Node.js ≥ 22                                                         |
-| **Transport**  | Streamable HTTP — default `http://127.0.0.1:8080/mcp`                |
+| **Transport**  | **stdio** — LM Studio spawns via `command` + `args` in `mcp.json`    |
 | **Tools**      | 7 (read, list, search, find, batch read, file info, local reasoning) |
 
 **What makes it different**
 
-- **LM Studio HTTP via `mcp.json`** — register a `url` entry in `~/.lmstudio/mcp.json` (works alongside stdio servers such as `browser`).
+- **LM Studio stdio via `mcp.json`** — register `command` + `args` in `~/.lmstudio/mcp.json` (same pattern as `browser`); no manual server start, no port 8080.
 - **Path allowlist** — only directories you configure are readable; extension and size limits apply.
 - **`reason_over_file`** — reads local files then calls your **local** LM Studio API; content stays on your machine.
 - **Document formats** — PDF, DOCX, and plain text / code via `pdf-parse` and `mammoth`.
@@ -81,16 +81,16 @@ LM Studio Chat model
 
 ## Required components
 
-| Type          | Component                         | Requirement                                             |
-| ------------- | --------------------------------- | ------------------------------------------------------- |
-| **Install**   | [Node.js](https://nodejs.org/)    | **≥ 22.0.0**                                            |
-| **Install**   | npm                               | Bundled with Node                                       |
-| **Install**   | [LM Studio](https://lmstudio.ai/) | Desktop app                                             |
-| **Enable**    | LM Studio local API               | Default `http://127.0.0.1:1234`                         |
-| **Enable**    | Loaded model                      | Load a model in LM Studio                               |
-| **Enable**    | This MCP server                   | `npm start` → `/mcp` endpoint                           |
-| **Configure** | Path allowlist                    | `allowedPaths` in project `.env` or `lmstudio-mcp.json` |
-| **Configure** | LM Studio MCP list                | `url` in `~/.lmstudio/mcp.json` (see step 4 below)      |
+| Type          | Component                         | Requirement                                           |
+| ------------- | --------------------------------- | ----------------------------------------------------- |
+| **Install**   | [Node.js](https://nodejs.org/)    | **≥ 22.0.0**                                          |
+| **Install**   | npm                               | Bundled with Node                                     |
+| **Install**   | [LM Studio](https://lmstudio.ai/) | Desktop app                                           |
+| **Enable**    | LM Studio local API               | Default `http://127.0.0.1:1234`                       |
+| **Enable**    | Loaded model                      | Load a model in LM Studio                             |
+| **Enable**    | This MCP server                   | LM Studio spawns it via `mcp.json` (stdio)            |
+| **Configure** | Path allowlist                    | `allowedPaths` in `lmstudio-mcp.json` or `MCP_CONFIG` |
+| **Configure** | LM Studio MCP list                | `command` + `args` in `~/.lmstudio/mcp.json` (step 3) |
 
 **Not required:** Python, Docker, vector DB, external database.
 
@@ -111,8 +111,7 @@ LM Studio Chat model
 | OS            | Windows 10+ / macOS / Linux                                  |
 | Node.js       | ≥ 22                                                         |
 | Network       | Needed for `npm install`; **not needed to read local files** |
-| MCP port      | Default **8080** (configurable)                              |
-| LM Studio API | Default **1234**                                             |
+| LM Studio API | Default **1234** (`reason_over_file` only)                   |
 
 ---
 
@@ -122,8 +121,10 @@ LM Studio Chat model
 
 ```bash
 npm install -g lmstudio-mcp-local
-lmstudio-mcp-local
+npm run build   # if installing from source clone
 ```
+
+LM Studio will spawn the server — you do **not** need to run `npm start` manually.
 
 Or run once without installing:
 
@@ -131,7 +132,7 @@ Or run once without installing:
 npx lmstudio-mcp-local
 ```
 
-Copy `.env.example` to `.env` and set `MCP_ALLOWED_PATHS` before starting (see below).
+Copy `lmstudio-mcp.example.json` to `lmstudio-mcp.json` and set `allowedPaths` (recommended over `.env` on Windows).
 
 ### Option B: from source
 
@@ -139,32 +140,19 @@ Copy `.env.example` to `.env` and set `MCP_ALLOWED_PATHS` before starting (see b
 git clone https://github.com/tomaxtoLuca/LMStudio-MCP-LocalPath.git LMStudio-MCP-Locally
 cd LMStudio-MCP-Locally
 npm install
+npm run build
 ```
 
 ### 1. Configure allowed local paths
 
-> **Two different files named `mcp.json` / `lmstudio-mcp.json`**
+> **Two different config files**
 >
-> | File                                                                  | Purpose                                                                 |
-> | --------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-> | **`~/.lmstudio/mcp.json`** (e.g. `C:\Users\<you>\.lmstudio\mcp.json`) | LM Studio’s MCP server list — add the HTTP `url` here in step 4         |
-> | **Project `lmstudio-mcp.json`** (repo root)                           | This server’s path allowlist and settings — **not** edited in LM Studio |
+> | File                                                                  | Purpose                                                         |
+> | --------------------------------------------------------------------- | --------------------------------------------------------------- |
+> | **`~/.lmstudio/mcp.json`** (e.g. `C:\Users\<you>\.lmstudio\mcp.json`) | LM Studio’s MCP server list — add `command` + `args` in step 3  |
+> | **`lmstudio-mcp.json`** (next to install / via `MCP_CONFIG`)          | This server’s path allowlist — **not** edited in LM Studio’s UI |
 
-```bash
-cp .env.example .env   # Windows: copy .env.example .env
-```
-
-Edit `.env` (colon-separated paths):
-
-```env
-# Windows
-MCP_ALLOWED_PATHS=F:/Documents:F:/Projects
-
-# macOS / Linux
-# MCP_ALLOWED_PATHS=/Users/me/Documents:/Users/me/Projects
-```
-
-Or copy `lmstudio-mcp.example.json` to `lmstudio-mcp.json` and edit `allowedPaths` (local file; not committed to git):
+Copy `lmstudio-mcp.example.json` to `lmstudio-mcp.json` in the project root (or set `MCP_CONFIG` in `mcp.json` to its full path):
 
 ```json
 {
@@ -174,33 +162,30 @@ Or copy `lmstudio-mcp.example.json` to `lmstudio-mcp.json` and edit `allowedPath
 }
 ```
 
+Optional `.env` (Windows: use **semicolon**-separated paths, or prefer JSON above):
+
+```env
+# Windows
+MCP_ALLOWED_PATHS=F:/Documents;F:/Projects
+
+# macOS / Linux
+# MCP_ALLOWED_PATHS=/Users/me/Documents:/Users/me/Projects
+```
+
 ### 2. Start LM Studio
 
 1. Open LM Studio
 2. **Load** a model
-3. Enable **Local Server / API** (default port 1234)
+3. Enable **Local Server / API** (default port 1234) — needed for `reason_over_file`
 4. Enable **Tool use** in Chat settings (if supported)
 
-### 3. Start MCP Server
+### 3. Add MCP Server in LM Studio
 
-```bash
-npm start
-# or after global install: lmstudio-mcp-local
-```
-
-Expected output:
-
-```
-  ✓ MCP Server listening on http://127.0.0.1:8080/mcp
-```
-
-### 4. Add MCP Server in LM Studio
-
-This server uses **HTTP** — start it first (`npm start` in step 3), then register the URL in LM Studio’s config file.
+LM Studio **spawns** this server as a child process over stdio — no separate `npm start`, no port 8080.
 
 1. LM Studio → **Program** → **Install** → **Edit mcp.json**
 2. Config file: `~/.lmstudio/mcp.json` (Windows: `C:\Users\<you>\.lmstudio\mcp.json`)
-3. Add a `url` entry under `mcpServers`. **Keep** any existing servers (e.g. `browser`):
+3. Add a `command` entry under `mcpServers`. **Keep** any existing servers (e.g. `browser`). **Remove** any old `"url": "http://127.0.0.1:8080/mcp"` entry:
 
 ```json
 {
@@ -210,21 +195,26 @@ This server uses **HTTP** — start it first (`npm start` in step 3), then regis
       "args": ["G:/Lmstudio/LM Studio/.lmstudio/plugins/mcp/browser/index.js"]
     },
     "lmstudio-mcp-local": {
-      "url": "http://127.0.0.1:8080/mcp"
+      "command": "node",
+      "args": ["F:/path/to/lmstudio-mcp-locally/dist/index.js"],
+      "env": {
+        "MCP_CONFIG": "F:/path/to/lmstudio-mcp-locally/lmstudio-mcp.json",
+        "MCP_DEBUG": "false"
+      }
     }
   }
 }
 ```
 
 - **`browser`** — stdio MCP; LM Studio launches it via `command` + `args`
-- **`lmstudio-mcp-local`** — HTTP MCP; you must run `npm start` separately before LM Studio can connect
+- **`lmstudio-mcp-local`** — stdio MCP; LM Studio launches it automatically on startup
+- **`MCP_CONFIG`** — full path to your `lmstudio-mcp.json` (required if LM Studio’s cwd is not the project folder)
+- After global install: `"command": "lmstudio-mcp-local"` with `"args": []` (ensure npm global bin is on PATH)
 
 4. Save valid JSON (no comments, no trailing commas), then restart or reload LM Studio
 5. In Chat, you should see **7 local file tools** alongside any other MCP tools
 
-If you changed `MCP_PORT`, use `http://127.0.0.1:<your-port>/mcp` in the `url` field.
-
-### 5. Verify local path access
+### 4. Verify local path access
 
 In Chat:
 
@@ -232,7 +222,7 @@ In Chat:
 Read the file at F:/Documents/test.txt
 ```
 
-If you see `Path not in allowlist`, add that directory to `MCP_ALLOWED_PATHS` and restart the MCP server.
+If you see `Path not in allowlist`, add that directory to `lmstudio-mcp.json` and restart LM Studio (to respawn the MCP process).
 
 ---
 
@@ -252,15 +242,25 @@ If you see `Path not in allowlist`, add that directory to `MCP_ALLOWED_PATHS` an
 
 ## Configuration
 
-### Change MCP port (default 8080)
+### Config file locations (`lmstudio-mcp.json`)
 
-**`.env`**
+Loaded in order (first found wins):
 
-```env
-MCP_PORT=9090
+1. `MCP_CONFIG` env var (set in `~/.lmstudio/mcp.json` → `env`)
+2. `{install-dir}/lmstudio-mcp.json` (next to `package.json`)
+3. `~/.config/lmstudio-mcp/config.json`
+4. `./lmstudio-mcp.json` (current working directory)
+
+### Advanced: HTTP debug mode (`--http`)
+
+For `/health` checks or curl debugging only — **not** the LM Studio integration path:
+
+```bash
+npm run start:http
+# or: node dist/index.js --http
 ```
 
-**`lmstudio-mcp.json`**
+Then open `http://127.0.0.1:8080/health`. Change port via `MCP_PORT` in `.env` or `lmstudio-mcp.json`:
 
 ```json
 {
@@ -270,18 +270,12 @@ MCP_PORT=9090
 }
 ```
 
-Restart the server and update the `url` in `~/.lmstudio/mcp.json` (e.g. `http://127.0.0.1:9090/mcp`).
+### Full config example (`lmstudio-mcp.json`)
 
-### Full config example (project `lmstudio-mcp.json`)
-
-This file configures **this MCP server** (allowlist, port, etc.) — not LM Studio’s `~/.lmstudio/mcp.json`.
+This file configures **this MCP server** (allowlist, etc.) — not LM Studio’s `~/.lmstudio/mcp.json`. The `server.port` field applies only to `--http` debug mode.
 
 ```json
 {
-  "server": {
-    "host": "127.0.0.1",
-    "port": 8080
-  },
   "security": {
     "allowedPaths": ["F:/Documents"],
     "maxFileSize": 52428800,
@@ -309,43 +303,42 @@ This file configures **this MCP server** (allowlist, port, etc.) — not LM Stud
 - **Path allowlist** — only configured directories are readable
 - **Blocked extensions** — `.exe`, `.key`, `.env`, etc.
 - **Max file size** — default 50MB
-- **Local only** — binds to `127.0.0.1` by default
+- **Local only** — stdio transport; no network listener in normal use
 - **`reason_over_file`** — calls local LM Studio API only
 
 ---
 
 ## Troubleshooting
 
-**Port in use** — another MCP server instance may still be running. Free the port or change `MCP_PORT`:
+**Tools not appearing in Chat** — confirm `dist/index.js` path in `mcp.json` is correct, `npm run build` was run, and LM Studio restarted. Remove any old `"url": "http://127.0.0.1:8080/mcp"` entry.
+
+**Spawn / init failure** — check Node.js ≥ 22 is on PATH. Test manually: `node /full/path/to/dist/index.js --help`. Ensure `args` points to `dist/index.js`, not `src/index.ts`.
+
+**Wrong allowlist after spawn** — LM Studio’s cwd may not be the project folder. Set `MCP_CONFIG` in `mcp.json` `env` to the full path of your `lmstudio-mcp.json`.
+
+**LM Studio not reachable** — ensure app is open, model loaded, API enabled (for `reason_over_file` only).
+
+**Path not in allowlist** — add directory to `lmstudio-mcp.json`. On Windows, use forward slashes (e.g. `F:/Projects`); the server normalizes `\` vs `/` when checking paths.
+
+**Model says it cannot access local files** — the MCP server is fine; the model did not call a tool. Enable **Tool use** in Chat. Prefer models with reliable function calling (community reports success with tool-capable instruct/coder GGUFs; Gemma often refuses; Qwen3.5 may emit XML tool syntax LM Studio cannot parse).
+
+**`Failed to parse tool call`** (e.g. `Expected "<parameter=", but got "<path="`) — model output format does not match LM Studio’s parser. Switch to another model or explicitly ask it to call `read_file` with JSON arguments.
+
+**Tool call pending / nothing happens** — LM Studio requires approval the first time. Click **Allow** or **Always allow any tool from mcp/lmstudio-mcp-local**. Without approval, `read_file` never runs.
+
+**Verify tool execution** — set `MCP_DEBUG=true` in `mcp.json` `env` or `.env`, restart LM Studio. Debug logs go to **stderr** (stdio mode must not write to stdout). Look for `[tool] read_file → …ms ✓` in LM Studio’s MCP logs.
+
+**`Plugin(mcp/browser): server.getTools is not a function`** — LM Studio’s bundled browser MCP plugin issue; unrelated to this server. Remove `browser` from `~/.lmstudio/mcp.json` while testing local files, or update LM Studio.
+
+**Model not using tools** — enable Tool use in Chat settings; reduce competing plugins (`browser`, `rag-v1`) during testing.
+
+**HTTP debug only: port in use** — another `--http` instance may be running:
 
 ```powershell
 # Windows
 netstat -ano | findstr :8080
 taskkill /PID <pid> /F
 ```
-
-```bash
-# macOS / Linux
-lsof -ti:8080 | xargs kill
-```
-
-**Tools not appearing in Chat** — confirm `npm start` is running and LM Studio reloaded `~/.lmstudio/mcp.json`.
-
-**LM Studio not reachable** — ensure app is open, model loaded, API enabled.
-
-**Path not in allowlist** — add directory to `MCP_ALLOWED_PATHS` or project `lmstudio-mcp.json`. On Windows, use forward slashes in config (e.g. `F:/Projects`); the server normalizes `\` vs `/` when checking paths.
-
-**Model says it cannot access local files** — the MCP server is fine; the model did not call a tool. Check `/health` returns `ok` and `activeSessions` > 0 after LM Studio connects. Enable **Tool use** in Chat. Prefer models with reliable function calling (community reports success with tool-capable instruct/coder GGUFs; Gemma often refuses; Qwen3.5 may emit XML tool syntax LM Studio cannot parse).
-
-**`Failed to parse tool call`** (e.g. `Expected "<parameter=", but got "<path="`) — model output format does not match LM Studio’s parser. Switch to another model or explicitly ask it to call `read_file` with JSON arguments.
-
-**Tool call pending / nothing happens** — LM Studio requires approval the first time. Click **Allow** or **Always allow any tool from mcp/lmstudio-mcp-local**. Without approval, `read_file` never runs.
-
-**Verify tool execution** — set `MCP_DEBUG=true` in `.env`, restart `npm start`, then chat. You should see `[tool] read_file → …ms ✓` in the server terminal when a call succeeds.
-
-**`Plugin(mcp/browser): server.getTools is not a function`** — LM Studio’s bundled browser MCP plugin issue; unrelated to this server. Remove `browser` from `~/.lmstudio/mcp.json` while testing local files, or update LM Studio.
-
-**Model not using tools** — enable Tool use in Chat settings; reduce competing plugins (`browser`, `rag-v1`) during testing.
 
 ---
 
